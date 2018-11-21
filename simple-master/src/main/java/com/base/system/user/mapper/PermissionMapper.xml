@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.base.system.user.mapper.PermissionMapper">
+
+    <insert id="savePermissionInRole">
+        INSERT sys_role_permission (role_id,permission_id) VALUES
+        <foreach collection="permissions" item="perId" separator=",">
+            (#{roleId},#{perId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteDefaultPermissionInRole">
+        DELETE
+            rp
+        FROM
+            sys_role_permission rp
+        LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE
+            rp.role_id = #{roleId}
+        AND p.hided = 1
+    </delete>
+
+    <delete id="deletePermissionInRole">
+        DELETE
+            rp
+        FROM
+            sys_role_permission rp
+        LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE
+            rp.role_id = #{roleId}
+        AND p.hided = 0
+    </delete>
+
+
+    <select id="selectByMenu" resultType="com.base.system.user.entity.Permission">
+        SELECT * FROM sys_permission WHERE hided = 0 AND menu_id = #{menuId}
+    </select>
+
+    <select id="selectDefaultByMenu" resultType="java.lang.Long">
+        SELECT sys_permission.id FROM sys_permission WHERE hided = 1 AND menu_id IN
+        <foreach collection="menus" item="item" separator="," open="(" close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="selectByRole" resultType="java.lang.Long">
+        SELECT
+            rp.permission_id
+        FROM
+            sys_role_permission rp
+        LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE
+            p.hided = 0
+        AND rp.role_id = #{roleId}
+    </select>
+</mapper>

@@ -1,0 +1,175 @@
+<style>
+    #Role_Manager .card-li{
+        margin-left: -10px;
+    }
+</style>
+<div id="Role_Manager" class="page">
+    <div>
+        <el-row :gutter="20" type="flex" justify="end">
+            <el-col :span="20" class="head_button">
+                <el-button size="small" type="primary" @click="handleClearRole">新 增</el-button>
+            </el-col>
+            <el-col :span="4" class="head_button_right">
+                <el-button size="small" type="warning" @click="handleDeleteRole">删 除</el-button>
+                <el-button size="small" type="success" @click="handleSaveRole">保 存</el-button>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20">
+            <el-col :span="8" class="page-card">
+                <ul>
+                    <li class="card-li"
+                        :class="{'li-select':(role.id == selectRole)}"
+                        @click="handleRoleClick(role)"
+                        v-for="role in roles" :key="role.id">
+                        <i v-if="role.id == selectRole" class="fa fa-cog fa-spin"></i>
+                        <i v-else="role.id == selectRole" class="fa fa-user-o fa-1x"></i>
+                        {{role.name}}
+                    </li>
+                </ul>
+            </el-col>
+            <el-col :span="15" :offset="1" class="page-card">
+                <div style="margin-top: 1.5em">
+                    <el-form ref="RoleForm" :rules="roleRules" :model="role" label-width="80px">
+                        <el-form-item label="角色名称" prop="name">
+                            <el-input v-model="role.name"></el-input>
+                        </el-form-item>
+                        <el-form-item label="角色描述" prop="roleDescribe">
+                            <el-input type="textarea" v-model="role.roleDescribe"></el-input>
+                        </el-form-item>
+                    </el-form>
+                </div>
+            </el-col>
+        </el-row>
+    </div>
+</div>
+<script>
+    new Vue({
+        el:"#Role_Manager",
+        data:function () {
+            var me = this;
+            var checkRoleName = function(rule, value, callback) {
+                if (value) {
+                    var param = {
+                        id:me.selectRole,
+                        name:value
+                    };
+                    $.ajax({
+                        url: "role/nameCheck",
+                        type: 'POST',
+                        sync:true,
+                        data:JSON.stringify(param),
+                        success: function (result) {
+                            if(result.data){
+                                callback();
+                            }else {
+                                callback(new Error('角色名已存在'));
+                            }
+                        }
+                    });
+                } else {
+                    callback();
+                }
+            };
+
+            return {
+                roles:[],
+                selectRole:'',
+                role:{
+                    id:'',
+                    name:'',
+                    roleDescribe:''
+                },
+                roleRules:{
+                    name: [
+                        { required: true, message: '请输入角色名称', trigger: 'blur' },
+                        { max: 20, message: '长度不能超过20个字符', trigger: 'blur' },
+                        { validator: checkRoleName, trigger: 'blur' }
+                    ]
+                }
+            }
+        },
+        mounted:function () {
+            this.init();
+        },
+        methods: {
+            init:function () {
+                this.loadRoleData();
+            },
+            loadRoleData:function () {
+                var me = this;
+                $.ajax({
+                    url: "role/all",
+                    type: 'POST',
+                    success: function (result) {
+                        if(result.data){
+                            me.roles = result.data;
+                        }
+                    }
+                });
+            },
+            handleRoleClick:function (role) {
+                this.selectRole = role.id;
+                this.role = clone(role);
+                this.$refs.RoleForm.clearValidate();
+            },
+            handleClearRole:function () {
+                this.selectRole = '';
+                this.role={
+                    name:'',
+                    roleDescribe:''
+                }
+            },
+            handleSaveRole:function () {
+                var me = this;
+                var param = this.role;
+                var type = "add";
+                if(param.id){
+                    type = "save";
+                }
+                me.$refs.RoleForm.validate(function (valid){
+                    if (valid) {
+                        $.ajax({
+                            url: "role/"+type,
+                            type: 'POST',
+                            data:JSON.stringify(param),
+                            success: function (result) {
+                                if(result.data && result.data.id){
+                                    me.selectRole = result.data.id;
+                                }else{
+                                    me.handleClearRole();
+                                }
+                                me.$message.success("保存成功");
+                                me.loadRoleData();
+                            }
+                        });
+                    } else {
+                        return false;
+                    }
+                });
+            },
+            handleDeleteRole:function () {
+                var me = this;
+                var id = me.selectRole;
+                if(id){
+                    this.$confirm('是否删除此角色?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(function () {
+                        $.ajax({
+                            url: "role/delete/"+id,
+                            type: 'GET',
+                            success: function (result) {
+                                me.handleClearRole();
+                                me.$message.success("删除成功");
+                                me.loadRoleData();
+                            }
+                        });
+                    });
+                }else {
+                    me.$message.warning("未选择角色");
+                }
+            }
+        }
+    });
+</script>

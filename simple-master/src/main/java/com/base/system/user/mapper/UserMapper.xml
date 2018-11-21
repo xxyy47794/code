@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.base.system.user.mapper.UserMapper">
+
+    <delete id="deleteByName">
+        UPDATE sys_user SET deleted=1 WHERE user_name = #{name}
+    </delete>
+
+    <select id="selectByName" resultType="com.base.system.user.entity.User">
+        SELECT * FROM sys_user WHERE user_name = #{name} AND deleted = 0
+    </select>
+
+    <select id="selectAll" resultType="com.base.system.user.entity.User">
+        SELECT * FROM sys_user WHERE deleted = 0
+    </select>
+</mapper>

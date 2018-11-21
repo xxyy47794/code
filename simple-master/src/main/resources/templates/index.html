@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Demo</title>
+</head>
+<script src="../asert/js/jquery-2.1.1.min.js" type="text/javascript"></script>
+<script src="../component/element-ui/vue.js"></script>
+<!-- import JavaScript -->
+<script src="../component/element-ui/index.js"></script>
+<script src="../asert/init.js"></script>
+<link rel="stylesheet" href="../component/element-ui/css/index.css"/>
+<link rel="stylesheet" href="../component/font-awesome/css/font-awesome.min.css">
+<link rel="stylesheet" href="../asert/css/index.css" />
+<body>
+    <div id="index">
+        <el-container>
+            <el-header class="header">
+                <div class="header-logo logo">
+                    <i class="el-icon-menu" @click="handleMenu"></i>
+                </div>
+                <a href="javascript:;" class="header-logo"> ERP管理系统-V2.01</a>
+                <div class="header-menu">
+                    <el-button type="text" @click="logout">注销</el-button>
+                </div>
+            </el-header>
+            <el-container>
+                <el-menu
+                        :default-active="activeIndex"
+                        class="el-menu-vertical-demo left-menu"
+                        @select="handleSelect"
+                        background-color="#545c64"
+                        text-color="#fff"
+                        active-text-color="#ffd04b"
+                        :collapse="isCollapse">
+                    <template v-for="item in menuData">
+                        <el-submenu v-if="item.children" :index="item.key" v-bind:key="item.value">
+                            <template slot="title">
+                                <i :class="item.data.icon"></i>
+                                <span>{{item.label}}</span>
+                            </template>
+                            <el-submenu v-for="item_2 in item.children" v-if="item_2.children" :index="item_2.key" v-bind:key="item_2.value">
+                                <template slot="title">
+                                    <span>{{item_2.label}}</span>
+                                </template>
+                                <el-menu-item v-for="item_3 in item_2.children" :index="item_3.key" v-bind:key="item_3.value">
+                                    <span slot="title">{{item_3.label}}</span>
+                                </el-menu-item>
+                            </el-submenu>
+                            <el-menu-item v-else :index="item_2.key" v-bind:key="item_2.value">
+                                <span slot="title">{{item_2.label}}</span>
+                            </el-menu-item>
+                        </el-submenu>
+                        <el-menu-item v-else :index="item.key" v-bind:key="item.value">
+                            <i :class="item.data.icon"></i>
+                            <span slot="title">{{item.label}}</span>
+                        </el-menu-item>
+                    </template>
+                </el-menu>
+                <el-main class="page-main" :style="{'height':minPageHeight+'px'}" style="overflow: hidden">
+                    <div id="main-box">
+                        <el-tabs v-model="activePane" type="card" closable @tab-remove="removeTab" @tab-click="handleTabSelect">
+                            <el-tab-pane
+                                    v-for="item in tabPanes"
+                                    :key="item.key"
+                                    :label="item.title"
+                                    :name="item.name">
+                                <div :style="{'height':(minPageHeight - 80)+'px'}">
+                                    <el-scrollbar style="height: 100%">
+                                        <div :id="item.key+'_pane'"></div>
+                                    </el-scrollbar>
+                                </div>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </div>
+                </el-main>
+            </el-container>
+        </el-container>
+    </div>
+</body>
+<script>
+    new Vue({
+        el: '#index',
+        data:function (){
+            return {
+                activeIndex: "1",
+                isCollapse: false,
+                minPageHeight:0,
+                activePane: '',
+                tabPanes: [],
+                menuData:[]
+            }
+        },
+        mounted:function () {
+            var me =this;
+            this.initMenuData();
+            this.handleSelect(this.activeIndex);
+            me.initMinPageHeight();
+            window.onresize = function () {
+                me.initMinPageHeight();
+            };
+        },
+        methods: {
+            handleTabSelect:function (tab) {
+                this.activeIndex = tab.name;
+            },
+            handleSelect:function(key, keyPath) {
+                this.activeIndex = key;
+                var me = this;
+                var validate = this.menuValidate(key);
+                if(!validate){
+                    return;
+                }
+                $.get("/menu/key/"+key,function (result) {
+                    var menu = result.data;
+                    if(menu){
+                        me.tabPanes.push({
+                            key:menu.pathKey,
+                            title: menu.name,
+                            name: menu.pathKey
+                        });
+                        me.activePane = key;
+                        me.$nextTick(function () {
+                            $("#"+menu.pathKey+"_pane").load("/page/"+key);
+                        });
+                    }
+                });
+            },
+            menuValidate:function (key) {
+                if(this.containKey(this.tabPanes,key)){
+                    this.activePane = key;
+                    return false;
+                }else {
+                    if(this.tabPanes && this.tabPanes.length > 8){
+                        this.$message.warning('最多同时打开8个菜单');
+                        return false;
+                    }
+                    return true;
+                }
+            },
+            containKey:function (arrays,key) {
+                var flag = false;
+                arrays.forEach(function (el) {
+                    if (el.name === key) {
+                        flag = true;
+                    }
+                });
+                return flag;
+            },
+            handleMenu:function(){
+                if(this.isCollapse){
+                    this.isCollapse = false;
+                }else {
+                    this.isCollapse = true;
+                }
+            },
+            initMinPageHeight:function(){
+                this.minPageHeight = $(window).height() - $(".page-main").offset().top;
+            },
+            removeTab:function(key) {
+                var tabs = this.tabPanes;
+                if(tabs && tabs.length === 1){
+                    this.$message.warning('请至少保留一个菜单');
+                    return;
+                }
+                var activePane = this.activePane;
+                if (activePane === key) {
+                    tabs.forEach(function(tab,index) {
+                        if (tab.key === key) {
+                            var nextTab = tabs[index + 1] || tabs[index - 1];
+                            if (nextTab) {
+                                activePane = nextTab.key;
+                            }
+                        }
+                     });
+                }
+                this.activePane = activePane;
+                this.activeIndex = activePane;
+                this.tabPanes = tabs.filter(function (tab) {
+                    return tab.name !== key;
+                });
+            },
+            initMenuData:function () {
+                var me = this;
+                $.ajax({
+                    url: "menu/tree",
+                    type: 'POST',
+                    async: false,
+                    contentType: 'application/json;charset=UTF-8',
+                    success: function (result) {
+                        if(result.data){
+                            me.menuData = result.data;
+                        }
+                    }
+                });
+            },
+            logout:function () {
+                $.ajax({
+                    url: "logout",
+                    type: 'GET',
+                    contentType: 'application/json;charset=UTF-8',
+                    success: function (result) {
+                        window.location.href = "/login";
+                    }
+                });
+            }
+        }
+    });
+</script>
+</html>
